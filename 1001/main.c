@@ -19,6 +19,7 @@ typedef unsigned long twodigits;
 
 typedef struct __big_number_t {
     size_t num_of_digits;
+    size_t point_shift; // float point shift counting from back to front (e.g. for 1.01, shift = 2)
     bool negative;
     digit digits[1];
 } big_number_t;
@@ -27,7 +28,7 @@ static void bn_print(big_number_t* bn)
 {
     if (!bn) return;
 
-    size_t size = bn->num_of_digits;
+    size_t size = bn->num_of_digits + (bn->point_shift ? 1 : 0);
     char* repr = (char*) malloc(size + 1);
     if (!repr) return;
 
@@ -36,6 +37,9 @@ static void bn_print(big_number_t* bn)
     while (i > 0) {
         *p++ = '0' + bn->digits[i - 1];
         --i;
+    if (i == bn->point_shift) {
+        *p++ = '.';
+    }
     }
     *p = '\0';
     printf("%s%s\n", bn->negative ? "-" : "", repr);
@@ -52,12 +56,13 @@ static big_number_t* create_big_number(size_t size)
     if (!bn) return 0;
 
     bn->num_of_digits = size;
+    bn->point_shift = 0;
     bn->negative = false;
     memset(bn->digits, 0, sizeof(digit) * size);
     return bn;
 }
 
-static big_number_t* create_big_number_from_long(long n)
+static big_number_t* create_big_number_from_long(long n, size_t shift)
 {
     if (n == 0) {
         return create_big_number(1);
@@ -70,6 +75,7 @@ static big_number_t* create_big_number_from_long(long n)
     if (!bn) return 0;
 
     bn->negative = negative;
+    bn->point_shift = shift;
     digit* p = bn->digits;
     size_t i = size;
     while (i > 0) {
@@ -90,6 +96,7 @@ static big_number_t* bn_copy(big_number_t* x)
     if (!bn) return 0;
 
     bn->negative = x->negative;
+    bn->point_shift = x->point_shift;
     memcpy(bn->digits, x->digits, sizeof(digit) * bn->num_of_digits);
     return bn;
 }
@@ -104,7 +111,7 @@ static big_number_t* bn_mul(big_number_t* x, big_number_t* y)
 {
     if (!x || !y) return 0;
     if (x->num_of_digits == 0 || y->num_of_digits == 0) return 0;
-    if (bn_is_zero(x) || bn_is_zero(y)) return create_big_number_from_long((long)0);
+    if (bn_is_zero(x) || bn_is_zero(y)) return create_big_number_from_long((long)0, 0);
 
     size_t size = x->num_of_digits + y->num_of_digits;
     big_number_t* z = create_big_number(size);
@@ -129,6 +136,7 @@ static big_number_t* bn_mul(big_number_t* x, big_number_t* y)
         }
     }
 
+    // remove heading zeros
     i = size;
     while (i > 0 && z->digits[i - 1] == 0) {
         --i;
@@ -137,17 +145,20 @@ static big_number_t* bn_mul(big_number_t* x, big_number_t* y)
         z->num_of_digits = i;
     }
 
+    // setting new shift
+    z->point_shift = x->point_shift + y->point_shift;
+
     return z;
 }
 
 static big_number_t* bn_pow(big_number_t* base, long power)
 {
     if (!base) return 0;
-    if (power == 0) return create_big_number_from_long((long)1);
+    if (power == 0) return create_big_number_from_long((long)1, 0);
     if (power == 1) return bn_copy(base);
 
     big_number_t* b = bn_copy(base);
-    big_number_t* r = create_big_number_from_long((long)1);
+    big_number_t* r = create_big_number_from_long((long)1, 0);
     while (power != 0) {
         if (power & 1) {
             big_number_t* tmp = bn_mul(r, b);
@@ -163,15 +174,37 @@ static big_number_t* bn_pow(big_number_t* base, long power)
     return r;
 }
 
+static void conv_str_to_decimal(char* str, int* decimal, size_t* shift)
+{
+    if (!str || !decimal || !shift) return;
+
+    char* str_decimal = (char*) malloc(strlen(str) + 1);
+    if (!str_decimal) return;
+
+    memset(str_decimal, 0, strlen(str) + 1);
+    char* c = str;
+    char* p = str_decimal;
+    while (c < (str + strlen(str))) {
+    if (*c == '.') {
+        *shift = strlen(str) - (c - str) - 1;
+    }
+    else {
+        *p++ = *c;
+    }
+    ++c;
+    }
+}
+
 static void calc_pow()
 {
     char str_base[7] = { '\0' };
     int decimal = 0;
+    size_t shift = 0;
     int power = 0;
 
     while (scanf("%s %d", str_base, &power) != EOF) {
-        decimal = atoi(str_base);
-        big_number_t* bn = create_big_number_from_long((long)decimal);
+        conv_str_to_decimal(str_base, &decimal, &shift);
+        big_number_t* bn = create_big_number_from_long((long)decimal, shift);
         big_number_t* exp = bn_pow(bn, power);
         bn_print(exp);
         SAFE_RELEASE(bn);
