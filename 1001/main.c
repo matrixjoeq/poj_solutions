@@ -14,12 +14,17 @@
         } \
     } while (0)
 
+#ifndef max
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#endif
+
 typedef unsigned short digit;
 typedef unsigned long twodigits;
 
 typedef struct __big_number_t {
     size_t num_of_digits;
-    size_t point_shift; // float point shift counting from back to front (e.g. for 1.01, shift = 2)
+    size_t point_shift; // float point shift counting from back to front 
+                        // (e.g. for 1.01, shift = 2)
     bool negative;
     digit digits[1];
 } big_number_t;
@@ -28,18 +33,35 @@ static void bn_print(big_number_t* bn)
 {
     if (!bn) return;
 
-    size_t size = bn->num_of_digits + (bn->point_shift ? 1 : 0);
+    size_t size = max(bn->num_of_digits, bn->point_shift) + (bn->point_shift ? 1 : 0);
     char* repr = (char*) malloc(size + 1);
     if (!repr) return;
 
-    size_t i = size;
+    size_t i = bn->num_of_digits;
     char* p = repr;
-    while (i > 0) {
-        *p++ = '0' + bn->digits[i - 1];
-        --i;
-    if (i == bn->point_shift) {
+
+    if (bn->num_of_digits < bn->point_shift) {
         *p++ = '.';
+        size_t num_of_heading_zero = bn->point_shift - bn->num_of_digits;
+        while (num_of_heading_zero-- > 0) *p++ = '0';
+        while (i > 0) {
+            *p++ = '0' + bn->digits[i - 1];
+            --i;
+        }
     }
+    else {
+        while (i > 0) {
+            *p++ = '0' + bn->digits[i - 1];
+            --i;
+            if (i == bn->point_shift) *p++ = '.';
+        }
+    }
+
+    // remove trailing zeros for fraction part
+    if (bn->point_shift) {
+        while (*--p == '0');
+        if (*p == '.') --p;
+        ++p;
     }
     *p = '\0';
     printf("%s%s\n", bn->negative ? "-" : "", repr);
@@ -185,14 +207,16 @@ static void conv_str_to_decimal(char* str, int* decimal, size_t* shift)
     char* c = str;
     char* p = str_decimal;
     while (c < (str + strlen(str))) {
-    if (*c == '.') {
-        *shift = strlen(str) - (c - str) - 1;
+        if (*c == '.') {
+            *shift = strlen(str) - (c - str) - 1;
+        }
+        else {
+            *p++ = *c;
+        }
+        ++c;
     }
-    else {
-        *p++ = *c;
-    }
-    ++c;
-    }
+    *decimal = atoi(str_decimal);
+    SAFE_RELEASE(str_decimal);
 }
 
 static void calc_pow()
