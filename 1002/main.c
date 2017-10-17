@@ -86,14 +86,14 @@ static int compare(const void* x, const void* y)
     const uint32_t* _x = (const uint32_t*)x;
     const uint32_t* _y = (const uint32_t*)y;
 
-    return (*_x < *_y ? -1 : 
+    return (*_x <  *_y ? -1 : 
             *_x == *_y ?  0 : 1);
 }
 
 static void output_duplicated_numbers(slist_t* list)
 {
     if (!list) {
-        printf("No duplicates\n");
+        printf("No duplicates.\n");
         return;
     }
 
@@ -263,12 +263,13 @@ static void check_phone_numbers()
     assert(numbers && "Failed to allocate memory for input numbers");
     memset(numbers, 0, sizeof(uint32_t) * num_of_lines);
 
-    char str_number[16] = { '\0' };
+    char str_number[64] = { '\0' };
     uint32_t* p = numbers;
     size_t count = 0;
     while (scanf("%s", str_number) != EOF && count < num_of_lines) {
         *p++ = normalize_number(str_number);
         ++count;
+        memset(str_number, 0, sizeof(str_number));
     }
 
     //dump_numbers(numbers, count);
