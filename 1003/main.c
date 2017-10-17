@@ -28,7 +28,62 @@
  *==================================================================================
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <assert.h>
+
+static void output_result(uint32_t n)
+{
+    printf("%u card(s)\n", n);
+}
+
+static double calculate(uint32_t n)
+{
+    double r = 0.0;
+    for (uint32_t i = 1; i <= n; ++i) {
+        r += 1 / (i + 1);
+    }
+    
+    return r;
+}
+
+static uint32_t conv_str_to_uint(char s[4])
+{
+    s[1] = s[2];
+    s[2] = s[3];
+    s[3] = '\0';
+    uint32_t r = (uint32_t) atoi(s);
+    return r;
+}
+
+static void guess_card_number()
+{
+    char str_length[4] = { '\0' };
+    while (1) {
+        if (scanf("%s", str_length) == EOF) break;
+        if (strcmp(str_length, "0.00") == 0) break;
+        
+        uint32_t length = conv_str_to_uint(str_length);
+        if (length <= 50) {
+            // minimum length is 0.5 for one card, so any number not greater than 0.5 must be one card
+            output_result(1u);
+        }
+        else {
+            // take a guess since 2 cards
+            uint32_t guess = 2u;
+            uint32_t prev_guess = 1u;
+            
+            while (1) {
+                uint32_t guess_length = (uint32_t)(calculate(guess) * 100);
+                
+            }
+        }
+    }
+}
 
 int main()
 {
+    guess_card_number();
+    return 0;
 }
