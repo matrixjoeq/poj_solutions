@@ -33,13 +33,27 @@
 #include <string.h>
 #include <assert.h>
 
+static uint32_t s_guess_times;
+
+static uint32_t reset_guess_times()
+{
+    uint32_t r = s_guess_times;
+    s_guess_times = 0;
+    return r;
+}
+
 static void output_result(uint32_t n)
 {
-    printf("%u card(s)\n", n);
+    printf("%u card(s)", n);
+#ifdef PERF_MEASURE
+    printf(", guessed %u time(s)", reset_guess_times());
+#endif // PERF_MEASURE
+    printf("\n");
 }
 
 static double calculate(uint32_t n)
 {
+    ++s_guess_times;
     double r = 0.0;
     for (uint32_t i = 1; i <= n; ++i) {
         r += 1.0 / (i + 1);
@@ -76,21 +90,25 @@ static void guess_card_number()
                     guess *= 2;
                 }
                 else {
-                    while (--guess > prev_guess) {
+                    uint32_t low_bound = prev_guess;
+                    uint32_t high_bound = guess;
+
+                    guess = (low_bound + high_bound) / 2;
+                    while (guess > low_bound) {
                         guess_length = calculate(guess);
-                        if (guess_length < length) {
-                            ++guess;
+                        if (guess_length == length) {
                             break;
                         }
-                        else if (guess_length == length) {
-                            break;
+                        else if (guess_length < length) {
+                            low_bound = guess;
                         }
                         else {
-                            continue;
+                            high_bound = guess;
                         }
+                        guess = (low_bound + high_bound) / 2;
                     }
 
-                    if (guess == prev_guess) ++guess;
+                    if (guess == low_bound) ++guess;
 
                     break;
                 }
