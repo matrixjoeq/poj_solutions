@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
 
 static uint32_t s_guess_times;
 
